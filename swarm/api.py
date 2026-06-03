@@ -5,7 +5,7 @@ import os
 import tempfile
 import uuid as _uuid
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ from .stream import run_swarm_streaming
 from .graph import run_swarm
 from .export.pdf_export import export_pdf
 from .tools.file_extract import extract_document, UploadError
+from .guard import rate_limiter, result_cache
 
 app = FastAPI(title="Equity Research Swarm")
 
@@ -44,16 +45,27 @@ async def upload(file: UploadFile = File(...), ticker: str = Form("")):
             "chunks": len(docs.get("documents", []))}
 
 
-@app.get("/api/stream_upload/{token}")
-def stream_upload(token: str):
-    entry = _UPLOADS.get(token)
+@app.get("/api/stream/{ticker}")
+def stream(ticker: str, request: Request):
+    ticker = ticker.upper().strip()
+    client = request.client.host if request.client else "unknown"
 
     def gen():
-        if not entry:
-            yield f"data: {json.dumps({'stage':'error','status':'error','label':'Upload expired - please re-upload.'})}\n\n"
+        cached = result_cache.get(ticker)
+        if cached is not None:
+            for stage in ("planner", "retriever", "quant", "analyst", "critic", "synthesizer"):
+                yield f"data: {json.dumps({'stage': stage, 'status': 'done', 'label': 'cached'})}\n\n"
+            yield f"data: {json.dumps({'stage': 'done', 'status': 'done', 'result': cached})}\n\n"
             return
-        for event in run_swarm_streaming(entry["ticker"], uploaded_docs=entry["docs"]):
+        if not rate_limiter.allow(client):
+            wait = rate_limiter.retry_after(client)
+            msg = f"Rate limit reached - try again in ~{wait // 60} min. (Public demo cap to protect API quota.)"
+            yield f"data: {json.dumps({'stage': 'error', 'status': 'error', 'label': msg})}\n\n"
+            return
+        for event in run_swarm_streaming(ticker):
             payload = {k: v for k, v in event.items() if k != "_state_ref"}
+            if payload.get("stage") == "done" and payload.get("result"):
+                result_cache.put(ticker, payload["result"])
             yield f"data: {json.dumps(payload)}\n\n"
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache",
