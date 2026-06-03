@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Veritas · Equity Research Swarm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;400;600;800&family=Space+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg1:#e9eaee; --bg2:#d6d8de; --ink:#1a1d24; --dim:#6b7180;
+    --line:rgba(20,24,32,.12); --panel:rgba(255,255,255,.55);
+    --gold:#d98a2b; --gold2:#b86a1a; --hot:#ff7a18; --cool:#3a6ea5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Sora',system-ui,sans-serif;color:var(--ink);
+    background:linear-gradient(135deg,#eceef2 0%,#dcdee4 55%,#cdd0d8 100%);
+    min-height:100vh;overflow-x:hidden;position:relative;
+  }
+  .mono{font-family:'Space Mono',monospace}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 32px;position:relative;z-index:2}
+
+  /* warm glow seeping from behind the sphere */
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(640px 640px at 62% 46%, rgba(255,150,40,.16), transparent 60%)}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:30px 0;position:relative;z-index:3}
+  .logo{font-weight:800;letter-spacing:3px;font-size:18px}
+  nav{display:flex;gap:34px;font-size:12px;letter-spacing:2px;color:var(--dim)}
+  nav span{cursor:default}
+  .pager{font-size:11px;letter-spacing:2px;color:var(--dim);margin-top:-10px}
+
+  /* HERO with canvas */
+  .hero{position:relative;min-height:calc(100vh - 96px);display:flex;align-items:center}
+  #sphere{position:absolute;top:50%;left:56%;transform:translate(-50%,-50%);
+    width:min(78vh,820px);height:min(78vh,820px);z-index:1}
+  .hero-copy{position:relative;z-index:2;max-width:560px}
+  .hero-copy h1{font-size:clamp(38px,5.6vw,76px);font-weight:800;line-height:.98;letter-spacing:-1px}
+  .hero-copy h1 .thin{font-weight:200}
+  .hero-copy p{margin-top:22px;color:var(--dim);font-size:17px;line-height:1.6;max-width:430px}
+  .search{margin-top:34px;display:flex;gap:10px;max-width:440px}
+  .search input{flex:1;background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:2px;
+    padding:16px 18px;font-family:'Space Mono',monospace;font-size:15px;letter-spacing:1px;color:var(--ink);outline:none;backdrop-filter:blur(8px)}
+  .search input:focus{border-color:var(--gold)}
+  .search button{background:var(--ink);color:#fff;border:none;border-radius:2px;padding:0 28px;
+    font-weight:600;letter-spacing:1px;font-size:13px;cursor:pointer;transition:.2s;text-transform:uppercase}
+  .search button:hover{background:var(--gold2)}
+  .search button:disabled{opacity:.45;cursor:not-allowed}
+  .examples{margin-top:14px;font-size:12px;color:var(--dim);letter-spacing:1px}
+  .examples b{cursor:pointer;color:var(--gold2);margin:0 7px;font-weight:600}
+  .updiv{margin-top:26px;max-width:440px}
+  .upor{display:flex;align-items:center;gap:12px;color:var(--dim);font-size:11px;letter-spacing:2px;margin-bottom:14px}
+  .upor::before,.upor::after{content:"";flex:1;height:1px;background:var(--line)}
+  .upzone{display:flex;align-items:center;gap:12px;padding:16px 18px;border:1px dashed var(--line);
+    border-radius:2px;cursor:pointer;transition:.2s;background:rgba(255,255,255,.4)}
+  .upzone:hover{border-color:var(--gold);background:rgba(255,255,255,.7)}
+  .upzone.has{border-style:solid;border-color:var(--gold)}
+  .upicon{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:15px;flex-shrink:0}
+  .uptext{font-size:13px;color:var(--dim);line-height:1.4}
+  .uprow{display:flex;gap:10px;margin-top:10px}
+  .uprow input{flex:1;background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:2px;
+    padding:13px 16px;font-family:'Space Mono',monospace;font-size:13px;letter-spacing:1px;color:var(--ink);outline:none}
+  .uprow input:focus{border-color:var(--gold)}
+  .uprow button{background:var(--ink);color:#fff;border:none;border-radius:2px;padding:0 22px;
+    font-weight:600;letter-spacing:1px;font-size:12px;cursor:pointer;text-transform:uppercase;transition:.2s}
+  .uprow button:hover{background:var(--gold2)}
+
+  /* status readout near sphere while running */
+  .status{position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:3;width:240px;
+    text-align:right;opacity:0;transition:.4s;pointer-events:none}
+  .status.on{opacity:1}
+  .status .stage-row{padding:7px 0;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:1px;
+    color:var(--dim);text-transform:uppercase;transition:.3s}
+  .status .stage-row.active{color:var(--hot);font-weight:600}
+  .status .stage-row.done{color:var(--ink)}
+  .status .stage-row .lab{display:block;font-size:10px;letter-spacing:.5px;text-transform:none;color:var(--dim);margin-top:2px}
+
+  .scrollcue{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;color:var(--dim);font-size:11px;letter-spacing:2px}
+
+  nav span,nav a{cursor:pointer;transition:.2s;color:var(--dim);text-decoration:none}
+  nav span:hover,nav a:hover{color:var(--ink)}
+
+  /* HOW IT WORKS */
+  .how{padding:70px 0 40px;position:relative;z-index:2}
+  .how-head{max-width:640px;margin-bottom:50px}
+  .how-head h2{font-size:clamp(28px,4.4vw,52px);font-weight:800;line-height:1.02;letter-spacing:-.5px;margin-top:14px}
+  .how-head h2 .thin{font-weight:200;color:var(--dim)}
+  .how-head p{margin-top:16px;color:var(--dim);font-size:16px;line-height:1.6}
+  .flow{display:flex;gap:0;position:relative;flex-wrap:nowrap;overflow-x:auto;padding:10px 0 20px}
+  .flowline{position:absolute;top:54px;left:6%;right:6%;height:2px;background:var(--line);z-index:0;overflow:hidden}
+  .flowline .pulse{position:absolute;top:0;left:-12%;width:12%;height:100%;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    animation:flowpulse 3.2s linear infinite}
+  @keyframes flowpulse{0%{left:-12%}100%{left:100%}}
+  .step{flex:1;min-width:178px;position:relative;padding:0 14px;z-index:1;
+    opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+  .step.in{opacity:1;transform:none}
+  .char{width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,.6);
+    border:1px solid var(--line);display:grid;place-items:center;position:relative;z-index:2;
+    box-shadow:0 6px 24px rgba(20,24,32,.06)}
+  .char svg{width:54px;height:54px;overflow:visible}
+  .char svg *{stroke:var(--ink);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .step .num{font-family:'Space Mono',monospace;font-size:12px;color:var(--gold2);letter-spacing:1px;margin-top:18px}
+  .step h4{font-size:18px;font-weight:800;margin:4px 0 8px}
+  .step .plain{color:#33384a;font-size:14px;line-height:1.5;margin-bottom:8px}
+  .step .tech{color:var(--dim);font-size:11.5px;line-height:1.5;font-family:'Space Mono',monospace}
+
+  /* per-character motion — runs continuously once the step is revealed */
+  .step.in .char{animation:bob 3s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  /* Planner: lines draw in */
+  .pl{stroke-dasharray:40;stroke-dashoffset:40}
+  .step.in .pl1{animation:draw 2.4s ease infinite}
+  .step.in .pl2{animation:draw 2.4s ease infinite .25s}
+  .step.in .pl3{animation:draw 2.4s ease infinite .5s}
+  @keyframes draw{0%{stroke-dashoffset:40}40%,100%{stroke-dashoffset:0}}
+
+  /* Retriever: docs fly in */
+  .doc{fill:rgba(217,138,43,.15)}
+  .step.in .d1{animation:fly 2.6s ease infinite}
+  .step.in .d2{animation:fly 2.6s ease infinite .3s}
+  .step.in .d3{animation:fly 2.6s ease infinite .6s}
+  @keyframes fly{0%{transform:translate(0,-22px);opacity:0}30%,100%{transform:translate(0,0);opacity:1}}
+
+  /* Quant: bars rise */
+  .step.in .b1{animation:rise 2.4s ease infinite}
+  .step.in .b2{animation:rise 2.4s ease infinite .2s}
+  .step.in .b3{animation:rise 2.4s ease infinite .4s}
+  @keyframes rise{0%{height:0;y:62px}45%,100%{}}
+  .step.in .b1{animation:rise1 2.4s ease infinite}
+  .step.in .b2{animation:rise2 2.4s ease infinite .2s}
+  .step.in .b3{animation:rise3 2.4s ease infinite .4s}
+  @keyframes rise1{0%{height:0;transform:translateY(0)}45%,100%{height:22px;transform:translateY(-22px)}}
+  @keyframes rise2{0%{height:0;transform:translateY(0)}45%,100%{height:34px;transform:translateY(-34px)}}
+  @keyframes rise3{0%{height:0;transform:translateY(0)}45%,100%{height:16px;transform:translateY(-16px)}}
+  .bar{fill:var(--gold);stroke:none}
+
+  /* Analyst: pen writes lines */
+  .write{stroke-dasharray:34;stroke-dashoffset:34}
+  .step.in .w1{animation:draw 2.6s ease infinite}
+  .step.in .w2{animation:draw 2.6s ease infinite .3s}
+  .step.in .w3{animation:draw 2.6s ease infinite .6s}
+  .pen{fill:rgba(217,138,43,.25);stroke:var(--gold2)}
+  .step.in .pen{animation:penmove 2.6s ease infinite}
+  @keyframes penmove{0%{transform:translate(0,0)}33%{transform:translate(-6px,12px)}66%{transform:translate(-12px,24px)}100%{transform:translate(0,0)}}
+
+  /* Critic: lens sweeps, check stamps */
+  .lens{stroke:var(--ink)}.handle{stroke:var(--ink)}
+  .step.in .lens,.step.in .handle{animation:sweep 2.8s ease infinite;transform-origin:34px 34px}
+  @keyframes sweep{0%{transform:translate(0,0)}25%{transform:translate(8px,6px)}50%{transform:translate(-4px,4px)}75%,100%{transform:translate(0,0)}}
+  .check{stroke:var(--gold2);stroke-dasharray:30;stroke-dashoffset:30}
+  .step.in .check{animation:stamp 2.8s ease infinite}
+  @keyframes stamp{0%,60%{stroke-dashoffset:30}80%,100%{stroke-dashoffset:0}}
+
+  /* Report: seal stamps */
+  .rpaper{fill:rgba(255,255,255,.4)}.fold{}
+  .seal{fill:rgba(217,138,43,.2);stroke:var(--gold2)}
+  .step.in .seal{animation:seal 3s ease infinite}
+  @keyframes seal{0%,55%{transform:scale(0);opacity:0;transform-origin:50px 56px}70%{transform:scale(1.2);opacity:1}80%,100%{transform:scale(1);opacity:1}}
+
+  /* REPORT */
+  .report{display:none;padding:40px 0 90px;position:relative;z-index:2}
+  .report.show{display:block;animation:rise .7s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1}}
+  .rhead{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:18px;
+    border-bottom:2px solid var(--ink);padding-bottom:22px}
+  .rhead h2{font-size:clamp(28px,4vw,46px);font-weight:800;letter-spacing:-.5px}
+  .rhead h2 span{font-weight:200;color:var(--dim)}
+  .rhead .meta{margin-top:8px;font-size:12px;letter-spacing:1px;color:var(--dim);text-transform:uppercase}
+  .rhead .meta b{color:var(--gold2)}
+  .dl{background:var(--ink);color:#fff;border:none;border-radius:2px;padding:14px 22px;font-weight:600;
+    letter-spacing:1px;font-size:12px;text-transform:uppercase;cursor:pointer;transition:.2s}
+  .dl:hover{background:var(--gold2)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:1px;background:var(--line);
+    border:1px solid var(--line);margin:30px 0}
+  .card{background:rgba(255,255,255,.55);padding:18px 20px}
+  .card .k{font-size:10px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+  .card .v{font-size:22px;font-weight:800;margin-top:8px;font-family:'Space Mono',monospace}
+
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin:24px 0}
+  @media(max-width:760px){.charts{grid-template-columns:1fr}}
+  .chartbox{background:rgba(255,255,255,.6);padding:22px}
+  .chartbox h4{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold2);margin-bottom:14px}
+
+  .memo{margin-top:36px;max-width:900px}
+  .memo h3{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--ink);margin:34px 0 12px;
+    padding-bottom:8px;border-bottom:1px solid var(--line);font-weight:600}
+  .memo p{color:#33384a;line-height:1.8;margin-bottom:14px;font-size:15.5px}
+  .cite{font-family:'Space Mono',monospace;font-size:10px;color:var(--cool);background:rgba(58,110,165,.1);
+    padding:1px 6px;border-radius:2px;margin-left:3px;white-space:nowrap}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0 30px;font-size:13px}
+  th{background:var(--ink);color:#fff;text-align:left;padding:11px 14px;font-weight:600;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+  th.num,td.num{text-align:right;font-family:'Space Mono',monospace}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);color:#33384a}
+  tr:nth-child(even) td{background:rgba(255,255,255,.4)}
+
+  .disc{margin-top:30px;font-size:11px;color:var(--dim);letter-spacing:.5px;border-top:1px solid var(--line);padding-top:16px}
+  .stmts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin:14px 0 30px}
+  @media(max-width:820px){.stmts{grid-template-columns:1fr}}
+  .stmt{background:rgba(255,255,255,.55);padding:18px}
+  .stmt h4{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px}
+  .stmt-t{margin:0;font-size:12.5px}
+  .stmt-t td{padding:7px 0;border-bottom:1px solid var(--line)}
+  .stmt-t tr:last-child td{border-bottom:none}
+  .stmt-t td:first-child{color:var(--dim)}
+  .stmt-t td.num{font-family:'Space Mono',monospace;color:var(--ink);font-weight:600}
+  .err{display:none;color:var(--gold2);text-align:center;padding:20px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<canvas id="sphere"></canvas>
+<div class="wrap">
+  <header>
+    <div class="logo">VERITAS</div>
+    <nav>
+      <span data-scroll="how">HOW IT WORKS</span>
+      <a href="https://github.com/YOUR_USERNAME/equity-research-swarm" target="_blank" rel="noopener">GITHUB ↗</a>
+    </nav>
+  </header>
+
+  <div class="hero" id="hero">
+    <div class="hero-copy">
+      <div class="pager">001 / 001 — AGENTIC EQUITY RESEARCH</div>
+      <h1 style="margin-top:18px">WE'RE A <span class="thin">FULLY-SOURCED</span> RESEARCH SWARM.</h1>
+      <p>A team of AI agents retrieves real filings, drafts the analysis, and a critic verifies every claim. Enter a ticker and watch them work.</p>
+      <div class="search">
+        <input id="ticker" placeholder="TICKER — e.g. AAPL" autocomplete="off"/>
+        <button id="run">Run</button>
+      </div>
+      <div class="examples">TRY <b data-t="AAPL">AAPL</b><b data-t="MSFT">MSFT</b><b data-t="NVDA">NVDA</b><b data-t="KO">KO</b></div>
+      <div class="updiv">
+        <div class="upor"><span>OR</span></div>
+        <label class="upzone" id="upzone">
+          <input type="file" id="upfile" accept=".pdf,.xlsx,.xls,.xlsm,.csv" hidden/>
+          <span class="upicon">↑</span>
+          <span class="uptext" id="uptext">Upload a report (PDF / Excel) — works for any company, incl. non-US</span>
+        </label>
+        <div class="uprow" id="uprow" style="display:none">
+          <input id="upticker" placeholder="Optional ticker for live tables" autocomplete="off"/>
+          <button id="uprun">Analyze</button>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="scrollcue" id="cue">◦ ENTER A TICKER TO BEGIN</div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <section class="how" id="how">
+    <div class="how-head">
+      <div class="pager">002 / 002 — HOW IT WORKS</div>
+      <h2>Six agents. <span class="thin">One verified memo.</span></h2>
+      <p>Each agent has one job and hands off to the next. The critic sends work back until every claim is backed by a real source.</p>
+    </div>
+    <div class="flow" id="flow">
+      <div class="flowline"><span class="pulse"></span></div>
+
+      <div class="step" data-i="0">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <rect class="cbox" x="14" y="12" width="52" height="56" rx="6"/>
+            <line class="pl pl1" x1="24" y1="28" x2="56" y2="28"/>
+            <line class="pl pl2" x1="24" y1="40" x2="50" y2="40"/>
+            <line class="pl pl3" x1="24" y1="52" x2="44" y2="52"/>
+          </svg>
+        </div>
+        <div class="num">01</div><h4>Planner</h4>
+        <p class="plain">Decides what questions the report must answer.</p>
+        <p class="tech">Decomposes the request into section-level sub-queries.</p>
+      </div>
+
+      <div class="step" data-i="1">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <circle class="cbox" cx="40" cy="46" r="20"/>
+            <rect class="doc d1" x="20" y="6" width="16" height="20" rx="2"/>
+            <rect class="doc d2" x="44" y="4" width="16" height="20" rx="2"/>
+            <rect class="doc d3" x="32" y="10" width="16" height="20" rx="2"/>
+          </svg>
+        </div>
+        <div class="num">02</div><h4>Retriever</h4>
+        <p class="plain">Pulls real filings and remembers where each fact came from.</p>
+        <p class="tech">Hybrid BM25 + semantic RAG over SEC EDGAR 10-K/10-Q.</p>
+      </div>
+
+      <div class="step" data-i="2">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <line class="axis" x1="18" y1="62" x2="62" y2="62"/>
+            <rect class="bar b1" x="22" y="62" width="9" height="0"/>
+            <rect class="bar b2" x="36" y="62" width="9" height="0"/>
+            <rect class="bar b3" x="50" y="62" width="9" height="0"/>
+          </svg>
+        </div>
+        <div class="num">03</div><h4>Quant</h4>
+        <p class="plain">Fetches the financial numbers — read-only.</p>
+        <p class="tech">Least-privilege tools; no write/trade actions exist.</p>
+      </div>
+
+      <div class="step" data-i="3">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <rect class="cbox" x="16" y="14" width="48" height="52" rx="6"/>
+            <path class="write w1" d="M26 30 H54"/>
+            <path class="write w2" d="M26 42 H50"/>
+            <path class="write w3" d="M26 54 H44"/>
+            <path class="pen" d="M58 22 l8 8 -20 20 -10 2 2 -10 z"/>
+          </svg>
+        </div>
+        <div class="num">04</div><h4>Analyst</h4>
+        <p class="plain">Writes the analysis, citing a source for every claim.</p>
+        <p class="tech">Section-by-section drafting grounded in retrieved evidence.</p>
+      </div>
+
+      <div class="step" data-i="4">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <circle class="lens" cx="34" cy="34" r="16"/>
+            <line class="handle" x1="46" y1="46" x2="62" y2="62"/>
+            <path class="check" d="M27 35 l6 6 12 -14"/>
+          </svg>
+        </div>
+        <div class="num">05</div><h4>Critic</h4>
+        <p class="plain">Checks every sentence and sends back anything unproven.</p>
+        <p class="tech">Verifies citations; loops to Analyst until grounded.</p>
+      </div>
+
+      <div class="step" data-i="5">
+        <div class="char">
+          <svg viewBox="0 0 80 80">
+            <path class="cbox rpaper" d="M22 12 h26 l12 12 v44 h-38 z"/>
+            <path class="fold" d="M48 12 v12 h12"/>
+            <circle class="seal" cx="50" cy="56" r="8"/>
+          </svg>
+        </div>
+        <div class="num">06</div><h4>Report</h4>
+        <p class="plain">Assembles the final sourced memo.</p>
+        <p class="tech">Synthesis + human-checkpoint + not-advice guardrail.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="report" id="report"></div>
+</div>
+
+<script>
+/* ---------- WebGL particle sphere ---------- */
+const canvas=document.getElementById("sphere");
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(55,1,0.1,100);camera.position.z=3.4;
+
+const COUNT=2600,RAD=1.35;
+const pos=new Float32Array(COUNT*3),base=new Float32Array(COUNT*3);
+for(let i=0;i<COUNT;i++){
+  const t=Math.acos(2*Math.random()-1),p=Math.random()*Math.PI*2;
+  const x=RAD*Math.sin(t)*Math.cos(p),y=RAD*Math.sin(t)*Math.sin(p),z=RAD*Math.cos(t);
+  base[i*3]=x;base[i*3+1]=y;base[i*3+2]=z;pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z;
+}
+const geo=new THREE.BufferGeometry();
+geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+const sprite=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");
+  const grd=g.createRadialGradient(32,32,0,32,32,32);grd.addColorStop(0,"rgba(255,255,255,1)");
+  grd.addColorStop(.4,"rgba(255,180,90,.9)");grd.addColorStop(1,"rgba(255,140,40,0)");
+  g.fillStyle=grd;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+const mat=new THREE.PointsMaterial({size:.055,map:sprite,transparent:true,depthWrite:false,
+  blending:THREE.AdditiveBlending,color:0xffffff});
+const points=new THREE.Points(geo,mat);scene.add(points);
+
+// faint connecting lines for the "network" feel
+const lgeo=new THREE.BufferGeometry();const lpos=[];
+for(let i=0;i<340;i++){const a=Math.floor(Math.random()*COUNT),b=Math.floor(Math.random()*COUNT);
+  lpos.push(base[a*3],base[a*3+1],base[a*3+2],base[b*3],base[b*3+1],base[b*3+2]);}
+lgeo.setAttribute("position",new THREE.Float32BufferAttribute(lpos,3));
+const lines=new THREE.LineSegments(lgeo,new THREE.LineBasicMaterial({color:0x222831,transparent:true,opacity:.10}));
+scene.add(lines);
+
+let energy=0.0,target=0.0; // 0 idle .. 1 full activity
+function resize(){const s=canvas.clientWidth||600;renderer.setSize(s,s,false);camera.aspect=1;camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(canvas);resize();
+
+let tprev=0;
+function animate(t){
+  requestAnimationFrame(animate);const dt=(t-tprev)/1000||0;tprev=t;
+  energy+=(target-energy)*Math.min(dt*2.5,1);
+  points.rotation.y+=0.0016+energy*0.004;points.rotation.x+=0.0006;
+  lines.rotation.copy(points.rotation);
+  const pulse=1+Math.sin(t*0.002)*0.02+energy*0.10;points.scale.setScalar(pulse);lines.scale.setScalar(pulse);
+  // displace particles outward with energy (breathing/agitation)
+  const arr=geo.attributes.position.array;
+  for(let i=0;i<COUNT;i++){const j=i*3;const n=Math.sin(t*0.003+i)*0.5+0.5;
+    const k=1+energy*0.18*n;arr[j]=base[j]*k;arr[j+1]=base[j+1]*k;arr[j+2]=base[j+2]*k;}
+  geo.attributes.position.needsUpdate=true;
+  mat.size=0.05+energy*0.03;
+  mat.color.setHSL(0.09-energy*0.02,0.9,0.55+energy*0.08);
+  renderer.render(scene,camera);
+}
+requestAnimationFrame(animate);
+
+/* ---------- nav scroll + scroll-triggered explainer ---------- */
+document.querySelectorAll("nav span[data-scroll]").forEach(el=>{
+  el.onclick=()=>{const id=el.dataset.scroll;
+    const target=id==="hero"?document.body:document.getElementById(id);
+    (id==="hero"?window:target).scrollTo?window.scrollTo({top:0,behavior:"smooth"})
+      :target.scrollIntoView({behavior:"smooth",block:"start"});
+    if(id!=="hero")document.getElementById(id).scrollIntoView({behavior:"smooth",block:"start"});};
+});
+const steps=document.querySelectorAll(".flow .step");
+const io=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){
+    const i=+e.target.dataset.i;setTimeout(()=>e.target.classList.add("in"),i*140);
+    io.unobserve(e.target);}});
+},{threshold:.3});
+steps.forEach(s=>io.observe(s));
+
+/* ---------- swarm run + status ---------- */
+const STAGES=[["planner","Planner"],["retriever","Retriever"],["quant","Quant"],
+  ["analyst","Analyst"],["critic","Critic"],["synthesizer","Report"]];
+const statusEl=document.getElementById("status");
+function buildStatus(){statusEl.innerHTML=STAGES.map(s=>
+  `<div class="stage-row" id="st-${s[0]}">${s[1]}<span class="lab" id="lb-${s[0]}"></span></div>`).join("");}
+buildStatus();
+function setStage(key,status,label){const row=document.getElementById("st-"+key);if(!row)return;
+  if(status==="active"){row.classList.add("active");row.classList.remove("done");}
+  if(status==="done"){row.classList.add("done");row.classList.remove("active");}
+  if(status==="revise"){row.classList.add("active");}
+  if(label)document.getElementById("lb-"+key).textContent=label;}
+
+const runBtn=document.getElementById("run"),tickerInput=document.getElementById("ticker");
+document.querySelectorAll(".examples b").forEach(b=>b.onclick=()=>{tickerInput.value=b.dataset.t;run();});
+runBtn.onclick=run;tickerInput.addEventListener("keydown",e=>{if(e.key==="Enter")run();});
+
+let es=null;
+function beginRun(){
+  document.getElementById("report").className="report";
+  document.getElementById("err").style.display="none";
+  document.getElementById("cue").textContent="◦ AGENTS WORKING";
+  buildStatus();statusEl.classList.add("on");target=1.0;
+  if(es)es.close();
+}
+function endRun(){runBtn.disabled=false;runBtn.textContent="Run";
+  const ub=document.getElementById("uprun");if(ub){ub.disabled=false;ub.textContent="Analyze";}}
+function consumeStream(url){
+  es=new EventSource(url);
+  es.onmessage=(e)=>{const ev=JSON.parse(e.data);
+    if(ev.stage==="start")return;
+    if(ev.stage==="error"){es.close();target=0.0;endRun();
+      const er=document.getElementById("err");er.style.display="block";er.textContent=(ev.label||"Error").toUpperCase();return;}
+    if(ev.stage==="done"){target=0.15;renderReport(ev.result);es.close();
+      endRun();document.getElementById("cue").textContent="◦ COMPLETE";return;}
+    setStage(ev.stage,ev.status,ev.label);
+    target=1.0;setTimeout(()=>{if(runBtn.disabled||document.getElementById("uprun").disabled)target=0.8;},250);
+  };
+  es.onerror=()=>{es.close();target=0.0;endRun();
+    const er=document.getElementById("err");er.style.display="block";
+    er.textContent="CONNECTION INTERRUPTED — TICKER MAY BE UNAVAILABLE OR SERVER BUSY.";};
+}
+function run(){
+  const ticker=(tickerInput.value||"").trim().toUpperCase();if(!ticker)return;
+  runBtn.disabled=true;runBtn.textContent="…";
+  beginRun();
+  consumeStream(`/api/stream/${encodeURIComponent(ticker)}`);
+}
+
+/* file upload path */
+const upFile=document.getElementById("upfile"),upZone=document.getElementById("upzone"),
+      upText=document.getElementById("uptext"),upRow=document.getElementById("uprow"),
+      upTicker=document.getElementById("upticker"),upRun=document.getElementById("uprun");
+let chosenFile=null;
+upFile.onchange=()=>{if(upFile.files.length){chosenFile=upFile.files[0];
+  upText.textContent=chosenFile.name;upZone.classList.add("has");upRow.style.display="flex";}};
+upRun.onclick=async()=>{
+  if(!chosenFile)return;
+  upRun.disabled=true;upRun.textContent="…";
+  beginRun();document.getElementById("cue").textContent="◦ READING DOCUMENT";
+  try{
+    const fd=new FormData();fd.append("file",chosenFile);fd.append("ticker",(upTicker.value||"").trim());
+    const res=await fetch("/api/upload",{method:"POST",body:fd});
+    const data=await res.json();
+    if(!res.ok||data.error){endRun();target=0.0;
+      const er=document.getElementById("err");er.style.display="block";
+      er.textContent=(data.error||"UPLOAD FAILED").toUpperCase();return;}
+    consumeStream(`/api/stream_upload/${data.token}`);
+  }catch(err){endRun();target=0.0;
+    const er=document.getElementById("err");er.style.display="block";er.textContent="UPLOAD FAILED — TRY AGAIN.";}
+};
+
+function fmtB(n){if(n==null)return"–";const a=Math.abs(n);
+  if(a>=1e12)return"$"+(n/1e12).toFixed(2)+"T";if(a>=1e9)return"$"+(n/1e9).toFixed(1)+"B";
+  if(a>=1e6)return"$"+(n/1e6).toFixed(1)+"M";return"$"+Number(n).toLocaleString();}
+
+function renderReport(r){
+  const rep=document.getElementById("report"),m=r.metrics||{};
+  const cards=[["Revenue",fmtB(m.revenue_ttm_usd)],["Net Income",fmtB(m.net_income_usd)],
+    ["Diluted EPS",m.diluted_eps??"–"],["Gross Margin",m.gross_margin_pct!=null?m.gross_margin_pct+"%":"–"],
+    ["Price",m.price_usd!=null?"$"+m.price_usd:"–"],["Market Cap",fmtB(m.market_cap_usd)]]
+    .map(c=>`<div class="card"><div class="k">${c[0]}</div><div class="v">${c[1]}</div></div>`).join("");
+  const peers=(r.peers||[]).map(p=>`<tr><td>${p.name||""}</td><td>${p.symbol||""}</td>
+    <td class="num">${p.price!=null?"$"+Number(p.price).toFixed(2):"–"}</td><td class="num">${fmtB(p.market_cap)}</td></tr>`).join("");
+  const hist=(r.financial_history||[]).map(h=>`<tr><td>${h.fiscal_year||""}</td>
+    <td class="num">${fmtB(h.revenue)}</td><td class="num">${fmtB(h.net_income)}</td><td class="num">${h.eps_diluted??"–"}</td></tr>`).join("");
+
+  function stmtTable(title,rows){
+    if(!rows||!rows.length)return"";
+    const body=rows.map(x=>{
+      const v=(typeof x.value==="number"&&Math.abs(x.value)>=1e6)?fmtB(x.value):
+              (typeof x.value==="number"?x.value.toLocaleString():x.value);
+      return `<tr><td>${x.label}</td><td class="num">${v}</td></tr>`;}).join("");
+    return `<div class="stmt"><h4>${title}</h4><table class="stmt-t"><tbody>${body}</tbody></table></div>`;
+  }
+  const st=r.statements||{};
+  const statementsBlock=(st.income||st.balance||st.cashflow)?`
+    <h3 class="memo" style="border:none">Financial Statements${st.period?` · FY${st.period}`:""}</h3>
+    <div class="stmts">
+      ${stmtTable("Income Statement",st.income)}
+      ${stmtTable("Balance Sheet",st.balance)}
+      ${stmtTable("Cash Flow",st.cashflow)}
+    </div>`:"";
+  rep.innerHTML=`
+    <div class="rhead"><div><h2>${r.company||r.ticker} <span>(${r.ticker})</span></h2>
+      <div class="meta">${(r.evidence||[]).length} sources · critic revisions <b>${r.revisions||0}</b> · grounded, no recommendation</div></div>
+      <button class="dl" onclick="downloadPdf('${r.ticker}')">↓ Download PDF</button></div>
+    <div class="cards">${cards}</div>
+    ${(r.financial_history&&r.financial_history.length)?`<div class="charts">
+      <div class="chartbox"><h4>Revenue & Net Income · 5Y</h4><canvas id="cRev"></canvas></div>
+      <div class="chartbox"><h4>Profitability Margins · 5Y</h4><canvas id="cMar"></canvas></div></div>`:""}
+    <div class="memo">${renderMemo(r.final||"")}</div>
+    ${peers?`<h3 class="memo" style="border:none">Peer Comparison</h3><table><thead><tr><th>Company</th><th>Ticker</th><th class="num">Price</th><th class="num">Market Cap</th></tr></thead><tbody>${peers}</tbody></table>`:""}
+    ${hist?`<h3 class="memo" style="border:none">Financial Summary · 5-Year</h3><table><thead><tr><th>Fiscal Year</th><th class="num">Revenue</th><th class="num">Net Income</th><th class="num">Diluted EPS</th></tr></thead><tbody>${hist}</tbody></table>`:""}
+    ${hist?`<h3 class="memo" style="border:none">Financial Summary · 5-Year</h3><table><thead><tr><th>Fiscal Year</th><th class="num">Revenue</th><th class="num">Net Income</th><th class="num">Diluted EPS</th></tr></thead><tbody>${hist}</tbody></table>`:""}
+    ${statementsBlock}
+    <div class="disc">This is an engineering demonstration, not investment advice. No buy/sell/hold recommendation is expressed or implied.</div>`;
+  rep.classList.add("show");
+  if(r.financial_history&&r.financial_history.length)drawCharts(r);
+  rep.scrollIntoView({behavior:"smooth"});
+}
+function renderMemo(md){let html="";for(let line of md.split("\n")){line=line.trim();
+  if(line.startsWith("# "))continue;if(line.startsWith("## ")){html+=`<h3>${line.slice(3)}</h3>`;continue;}
+  if(line.startsWith("---")||line.startsWith("*This is"))continue;if(!line)continue;
+  html+=`<p>${line.replace(/^- /,"").replace(/\[src:([^\]]+)\]/g,'<span class="cite">$1</span>')}</p>`;}
+  return html;}
+function drawCharts(r){const grid="rgba(20,24,32,.08)",dim="#6b7180";
+  const fh=[...r.financial_history].reverse(),yrs=fh.map(h=>h.fiscal_year);
+  new Chart(document.getElementById("cRev"),{type:"bar",data:{labels:yrs,datasets:[
+    {label:"Revenue",data:fh.map(h=>h.revenue/1e9),backgroundColor:"#3a6ea5"},
+    {label:"Net income",data:fh.map(h=>(h.net_income||0)/1e9),backgroundColor:"#d98a2b"}]},
+    options:{plugins:{legend:{labels:{color:dim}}},scales:{x:{grid:{color:grid},ticks:{color:dim}},
+    y:{grid:{color:grid},ticks:{color:dim,callback:v=>"$"+v+"B"}}}}});
+  const rh=r.ratio_history&&r.ratio_history.length?[...r.ratio_history].reverse():[];
+  if(rh.length)new Chart(document.getElementById("cMar"),{type:"line",data:{labels:rh.map(x=>x.fiscal_year),datasets:[
+    {label:"Gross",data:rh.map(x=>x.gross_margin),borderColor:"#3a6ea5",tension:.3},
+    {label:"Operating",data:rh.map(x=>x.operating_margin),borderColor:"#d98a2b",tension:.3},
+    {label:"Net",data:rh.map(x=>x.net_margin),borderColor:"#999",tension:.3}]},
+    options:{plugins:{legend:{labels:{color:dim}}},scales:{x:{grid:{color:grid},ticks:{color:dim}},
+    y:{grid:{color:grid},ticks:{color:dim,callback:v=>v+"%"}}}}});}
+async function downloadPdf(t){const res=await fetch("/api/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ticker:t})});
+  if(!res.ok){alert("PDF failed");return;}const b=await res.blob(),u=URL.createObjectURL(b);
+  const a=document.createElement("a");a.href=u;a.download=t+"_research_memo.pdf";a.click();URL.revokeObjectURL(u);}
+</script>
+</body>
+</html>

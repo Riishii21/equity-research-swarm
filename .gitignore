@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.gradio/
+
+# test output PDFs
+aapl_*.pdf
+*_memo.pdf

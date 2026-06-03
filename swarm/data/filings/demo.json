@@ -1,0 +1,31 @@
+{
+  "ticker": "DEMO",
+  "company": "DemoCorp Industries Inc.",
+  "documents": [
+    {
+      "id": "10k-2024-mdna",
+      "source": "DemoCorp 10-K FY2024, Item 7 (MD&A)",
+      "text": "Total revenue for fiscal year 2024 was $4.82 billion, an increase of 18% compared to $4.08 billion in fiscal 2023. The growth was driven primarily by expansion in the cloud services segment, which grew 34% year over year. Gross margin improved to 61.2% from 58.7% in the prior year, reflecting a favorable shift toward higher-margin subscription revenue."
+    },
+    {
+      "id": "10k-2024-income",
+      "source": "DemoCorp 10-K FY2024, Consolidated Statements of Operations",
+      "text": "Net income for fiscal 2024 was $612 million, compared to $498 million in fiscal 2023. Diluted earnings per share were $3.41 versus $2.79 in the prior year. Operating expenses totaled $2.34 billion, with research and development accounting for $890 million."
+    },
+    {
+      "id": "10k-2024-guidance",
+      "source": "DemoCorp FY2024 Earnings Call, CFO prepared remarks",
+      "text": "For fiscal 2025, management expects revenue in the range of $5.5 billion to $5.7 billion, representing growth of approximately 14% to 18%. The company anticipates continued margin expansion driven by operating leverage in the cloud segment, and expects full-year operating margin between 16% and 18%."
+    },
+    {
+      "id": "10k-2024-risks",
+      "source": "DemoCorp 10-K FY2024, Item 1A (Risk Factors)",
+      "text": "Our business is subject to intense competition from larger, better-capitalized competitors. A significant portion of revenue is concentrated among our top ten customers, who collectively accounted for 41% of total revenue in fiscal 2024. The loss of one or more major customers could materially harm our results. We are also exposed to foreign currency risk, as 38% of revenue is denominated in non-US currencies."
+    },
+    {
+      "id": "10k-2024-liquidity",
+      "source": "DemoCorp 10-K FY2024, Item 7 (Liquidity)",
+      "text": "As of the end of fiscal 2024, the company held $1.9 billion in cash and cash equivalents and $620 million in long-term debt. Cash generated from operating activities was $980 million during the year. The company maintains an undrawn $500 million revolving credit facility."
+    }
+  ]
+}
